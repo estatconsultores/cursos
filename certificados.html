@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:image"       content="img/og-portada.png">
+  <title>Verificador de Certificados</title>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d0d0d'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='20' font-family='serif'>🎓</text></svg>">
+
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    /* ── Variables (modo oscuro defecto) ── */
+    :root {
+      --brand: #FB8500;
+      --brand-dark: #c96a00;
+      --bg: #0d0d0d;
+      --bg2: #161616;
+      --bg3: #1f1f1f;
+      --bg4: #2a2a2a;
+      --text: #f5f0e8;
+      --text2: #a8a09a;
+      --text3: #6a6460;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --nav-bg: rgba(13,13,13,0.92);
+      --radius: 12px;
+      --radius-xl: 24px;
+    }
+    html.light {
+      --bg: #f7f3ee;
+      --bg2: #ffffff;
+      --bg3: #ede8e1;
+      --bg4: #e0d9d0;
+      --text: #1a1410;
+      --text2: #5a5048;
+      --text3: #9a9088;
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.14);
+      --nav-bg: rgba(247,243,238,0.94);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--brand); border-radius: 100px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--brand-dark); }
+    * { scrollbar-width: thin; scrollbar-color: var(--brand) var(--bg); }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.35s ease;
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.4rem;
+      color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo span { color: var(--brand); }
+    .nav-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.6; transform:scale(0.8); }
+    }
+    .nav-right { display: flex; align-items: center; gap: 1.25rem; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 100px; padding: 7px 16px;
+      font-size: 0.82rem; color: var(--text2);
+      text-decoration: none; cursor: pointer;
+      transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .back-btn:hover { border-color: var(--brand); color: var(--brand); }
+    .theme-toggle {
+      width: 44px; height: 24px;
+      background: var(--bg3); border: 1.5px solid var(--border2);
+      border-radius: 100px; cursor: pointer;
+      position: relative; transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .theme-toggle::after {
+      content: '';
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--brand);
+      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    html.light .theme-toggle::after { transform: translateX(20px); }
+    .theme-toggle-wrap { display: flex; align-items: center; gap: 8px; }
+    .theme-icon { font-size: 1rem; user-select: none; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 4rem 2rem 2rem;
+      max-width: 700px; margin: 0 auto; text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(251,133,0,0.1); border: 1px solid rgba(251,133,0,0.25);
+      border-radius: 100px; padding: 6px 14px;
+      font-size: 0.75rem; color: var(--brand);
+      letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800; line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+    .hero h1 em { color: var(--brand); font-style: normal; }
+    .hero p { font-size: 0.95rem; color: var(--text2); max-width: 480px; margin: 0 auto; line-height: 1.7; }
+
+    /* ── MAIN CARD ── */
+    .main-wrap {
+      max-width: 640px; margin: 0 auto;
+      padding: 2rem 2rem 5rem;
+    }
+
+    /* ── SEARCH BOX ── */
+    .search-card {
+      background: var(--bg2); border-radius: var(--radius-xl);
+      border: 1px solid var(--border); padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-card h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700; color: var(--text);
+      margin-bottom: 1.25rem;
+    }
+    .input-row {
+      display: flex; gap: 10px;
+    }
+    .code-input {
+      flex: 1;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 11px 16px;
+      color: var(--text); font-size: 0.9rem;
+      font-family: 'DM Sans', sans-serif; outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: 0.05em;
+    }
+    .code-input:focus { border-color: var(--brand); }
+    .code-input::placeholder { color: var(--text3); letter-spacing: 0; }
+    .search-btn {
+      background: var(--brand); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 11px 20px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .search-btn:hover { background: var(--brand-dark); transform: scale(1.02); }
+    .search-hint {
+      font-size: 0.78rem; color: var(--text3); margin-top: 0.75rem;
+    }
+
+    /* ── RESULT STATES ── */
+    .result-card {
+      background: var(--bg2); border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity:0; transform: translateY(10px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* error */
+    .result-error {
+      padding: 2.5rem; text-align: center;
+    }
+    .result-error .error-icon { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+    .result-error h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem;
+    }
+    .result-error p { font-size: 0.85rem; color: var(--text2); }
+
+    /* success */
+    .cert-image-wrap {
+      position: relative;
+    }
+    .cert-image-wrap img {
+      width: 100%; display: block;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    .cert-image-placeholder {
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, var(--bg3), var(--bg4));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      position: relative; overflow: hidden;
+    }
+    .cert-image-placeholder::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        45deg, transparent, transparent 20px,
+        rgba(251,133,0,0.03) 20px, rgba(251,133,0,0.03) 21px
+      );
+    }
+    .cert-verified-badge {
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(22,163,74,0.15);
+      border: 1px solid rgba(74,222,128,0.35);
+      border-radius: 100px; padding: 5px 12px;
+      font-size: 0.72rem; color: #4ade80;
+      font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; backdrop-filter: blur(6px);
+    }
+    html.light .cert-verified-badge {
+      background: rgba(22,163,74,0.12); color: #16a34a;
+      border-color: rgba(22,163,74,0.3);
+    }
+
+    .cert-info { padding: 1.5rem; }
+    .cert-info h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem; font-weight: 700;
+      color: var(--text); margin-bottom: 0.3rem;
+    }
+    .cert-code-label {
+      font-size: 0.78rem; color: var(--text3);
+      font-family: monospace; letter-spacing: 0.06em;
+      margin-bottom: 1.25rem;
+    }
+    .cert-actions {
+      display: flex; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .cert-action-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-radius: 100px; padding: 9px 18px;
+      font-size: 0.83rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+      border: 1px solid transparent;
+    }
+    .cert-action-btn.primary {
+      background: var(--brand); color: #fff; border-color: var(--brand);
+    }
+    .cert-action-btn.primary:hover { background: var(--brand-dark); }
+    .cert-action-btn.secondary {
+      background: var(--bg3); color: var(--text2); border-color: var(--border2);
+    }
+    .cert-action-btn.secondary:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* QR */
+    .qr-section {
+      padding: 1.5rem; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1.25rem;
+    }
+    .qr-section > div:first-child {
+      background: #fff; border-radius: 10px; padding: 8px;
+      flex-shrink: 0;
+    }
+    .qr-section > div:first-child canvas,
+    .qr-section > div:first-child img { display: block; border-radius: 4px; }
+    .qr-text h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem;
+    }
+    .qr-text p { font-size: 0.78rem; color: var(--text3); line-height: 1.5; }
+    .qr-url {
+      font-size: 0.7rem; color: var(--text3);
+      word-break: break-all; margin-top: 0.4rem;
+      font-family: monospace;
+    }
+
+    /* ── INFO CARDS ── */
+    .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem; margin-top: 1.5rem;
+    }
+    .info-card {
+      background: var(--bg2); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 1.1rem 1.25rem;
+    }
+    .info-card-icon { font-size: 1.3rem; margin-bottom: 0.5rem; display: block; }
+    .info-card h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem;
+    }
+    .info-card p { font-size: 0.78rem; color: var(--text2); line-height: 1.5; }
+
+    @media (max-width: 500px) {
+      .input-row { flex-direction: column; }
+      .info-grid { grid-template-columns: 1fr; }
+      .qr-section { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="index.html">
+    <div class="nav-dot"></div>
+    Cursos<span>Estat Consultores</span>
+  </a>
+  <div class="nav-right">
+    <a class="back-btn" href="index.html">← Volver al inicio</a>
+    <div class="theme-toggle-wrap">
+      <span class="theme-icon">🌙</span>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar modo"></button>
+      <span class="theme-icon">☀️</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-eyebrow">🔎 Verificación oficial</div>
+  <h1>Verificá un <em>certificado</em></h1>
+  <p>Ingresá el código que aparece en el certificado para confirmar su autenticidad y ver el documento original.</p>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main-wrap">
+
+  <!-- Buscador -->
+  <div class="search-card">
+    <h2>Código del certificado</h2>
+    <div class="input-row">
+      <input
+        class="code-input"
+        id="codeInput"
+        type="text"
+        placeholder="Ej: SPSS-2024"
+        onkeydown="if(event.key==='Enter') buscar()"
+      >
+      <button class="search-btn" onclick="buscar()">→ Ver certificado</button>
+    </div>
+    <p class="search-hint">El código está impreso en la parte inferior del certificado.</p>
+  </div>
+
+  <!-- Resultado (se inyecta aquí) -->
+  <div id="resultado"></div>
+
+  <!-- Info cards -->
+  <div class="info-grid">
+    <div class="info-card">
+      <span class="info-card-icon">🔐</span>
+      <h4>Verificación real</h4>
+      <p>Cada certificado tiene un código único que solo puede validarse en este sitio.</p>
+    </div>
+    <div class="info-card">
+      <span class="info-card-icon">📱</span>
+      <h4>QR incluido</h4>
+      <p>Al verificar, se genera un QR compartible que apunta directamente al certificado.</p>
+    </div>
+    <div class="info-card">
+      <span class="info-card-icon">🎓</span>
+      <h4>Examen sincrónico</h4>
+      <p>Los certificados se obtienen rindiendo un examen vía Google Meet con el instructor.</p>
+    </div>
+    <div class="info-card">
+      <span class="info-card-icon">✅</span>
+      <h4>Validez permanente</h4>
+      <p>Los certificados no vencen y el enlace de verificación es permanente.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── JS ── -->
+<script>
+// ════════════════════════════════════════════════════════════════
+//  ✏️  CERTIFICADOS — Agregá aquí los códigos y rutas de imagen
+//
+//  Formato:  "CODIGO": "nombre-del-archivo.png"
+//  Las imágenes van en la misma carpeta certificados/
+//  Ejemplo:  "SPSS-2024": "certificado-juan-spss.png"
+// ════════════════════════════════════════════════════════════════
+const certificados = {
+  "DATA-001":  { file: "ejemplo-de-certificado.png", curso: "Curso de Ejemplo" },
+  "SPSS-2024": { file: "certificado-spss.png", curso: "SPSS Fundamentos" },
+  "WEB-DEV":   { file: "certificado-web.png", curso: "WordPress Profesional" },
+};
+
+function buscar() {
+  const code = document.getElementById("codeInput").value.trim().toUpperCase();
+  if (!code) return;
+  mostrarCertificado(code);
+  window.history.replaceState({}, "", `?code=${code}`);
+}
+
+function mostrarCertificado(code) {
+  const container = document.getElementById("resultado");
+  const data = certificados[code];
+
+  if (!data) {
+    container.innerHTML = `
+      <div class="result-card">
+        <div class="result-error">
+          <span class="error-icon">❌</span>
+          <h3>Certificado no encontrado</h3>
+          <p>El código <strong>${code}</strong> no corresponde a ningún certificado registrado.<br>
+          Verificá que esté escrito correctamente.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Ruta relativa a la imagen (misma carpeta certificados/)
+  const imgPath = `certificados/${data.file}`;
+  // URL completa para el QR y el enlace directo
+  const origin   = window.location.origin;
+  const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
+  const imgURL = `${origin}${basePath}certificados/${data.file}`;
+  const pageURL  = `${origin}${window.location.pathname}?code=${code}`;
+
+  container.innerHTML = `
+    <div class="result-card">
+      <div class="cert-image-wrap">
+        <img src="${imgPath}" alt="Certificado ${data.nombre}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="cert-image-placeholder" style="display:none">🎓</div>
+        <span class="cert-verified-badge">✓ Verificado</span>
+      </div>
+      <div class="cert-info">
+        <h3>${data.nombre}</h3>
+        <div class="cert-code-label">Código: ${code} · ${data.curso}</div>
+        <div class="cert-actions">
+          <a class="cert-action-btn primary"
+             href="${imgPath}" target="_blank" rel="noopener">
+            🔍 Ver certificado
+          </a>
+          <a class="cert-action-btn secondary"
+             href="${imgPath}" download="${code}-certificado.png">
+            ⬇ Descargar
+          </a>
+        </div>
+      </div>
+      <div class="qr-section">
+        <div id="qrcode"></div>
+        <div class="qr-text">
+          <h4>QR de verificación</h4>
+          <p>Escaneá para compartir o verificar este certificado desde cualquier dispositivo.</p>
+          <div class="qr-url">${pageURL}</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Generar QR
+  new QRCode(document.getElementById("qrcode"), {
+    text: pageURL,
+    width: 100,
+    height: 100,
+    colorDark: "#0d0d0d",
+    colorLight: "#ffffff"
+  });
+}
+
+// Leer código desde URL al cargar
+window.onload = () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  if (code) {
+    document.getElementById("codeInput").value = code;
+    mostrarCertificado(code.toUpperCase());
+  }
+};
+
+// ── TEMA ────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  } else if (!saved && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    document.documentElement.classList.add('light');
+  }
+})();
+</script>
+</body>
+</html>
